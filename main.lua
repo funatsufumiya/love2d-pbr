@@ -95,9 +95,13 @@ function love.load()
         metallic = base .. "metallic.png",
         roughness = base .. "roughness.png",
         ao = base .. "ao.png",
+        -- alpha = base .. "alpha.png",
     }
     pbrInstance:setTextures(texs)
     mesh:setTexture(pbrInstance:getAlbedoTexture())
+
+    -- Enable transparency processing in the PBR shader. Comment out to disable.
+    -- pbrInstance:setTransparencyEnabled(true)
 
     pbrInstance:setLights({0, 0, 10,  5, 5, 10,  -5, 5, 10, 0, -5, 10}, {400,400,400, 250,250,250, 250,250,250, 200,200,200})
     pbrInstance:setCamera({0,0,3})
@@ -110,6 +114,23 @@ function love.load()
     normalMat = identity3()
 end
 
+local function drawCheckerboard(w, h, tile)
+    tile = tile or 32
+    local cols = math.ceil(w / tile)
+    local rows = math.ceil(h / tile)
+    for y = 0, rows - 1 do
+        for x = 0, cols - 1 do
+            if ((x + y) % 2) == 0 then
+                love.graphics.setColor(0.85, 0.85, 0.85)
+            else
+                love.graphics.setColor(0.6, 0.6, 0.6)
+            end
+            love.graphics.rectangle("fill", x * tile, y * tile, tile, tile)
+        end
+    end
+    love.graphics.setColor(1, 1, 1)
+end
+
 function love.resize(w, h)
     local aspect = w / h
     projection = ortho(-2 * aspect, 2 * aspect, -2, 2, -10, 10)
@@ -117,6 +138,8 @@ end
 
 function love.draw()
     love.graphics.clear(0.1, 0.1, 0.1)
+    local w, h = love.graphics.getWidth(), love.graphics.getHeight()
+    -- drawCheckerboard(w, h, 48) -- larger tiles to make alpha easier to see
     pbrInstance:draw(mesh)
 end
 

@@ -7,6 +7,9 @@ uniform sampler2D normalMap;
 uniform sampler2D metallicMap;
 uniform sampler2D roughnessMap;
 uniform sampler2D aoMap;
+uniform sampler2D alphaMap;
+uniform int useAlphaMap;
+uniform int enableTransparency;
 
 // lights
 uniform vec3  lightPositions[4];
@@ -83,6 +86,19 @@ vec4 effect( vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords )
     float roughness = Texel(roughnessMap, texture_coords).r;
     float ao        = Texel(aoMap, texture_coords).r;
 
+    float alpha = 1.0;
+    if (enableTransparency == 1) {
+        if (useAlphaMap == 1) {
+            alpha = Texel(alphaMap, texture_coords).r;
+        } else {
+            alpha = Texel(albedoMap, texture_coords).a;
+        }
+        // Skip expensive lighting when fully transparent (alpha near 0)
+        if (alpha < 0.01) {
+            return vec4(0.0, 0.0, 0.0, 0.0);
+        }
+    }
+
     vec3 N = getNormalFromMap(normalMap,texture_coords);
     vec3 V = normalize(camPos - WorldPos);
 
@@ -120,5 +136,5 @@ vec4 effect( vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords )
     vec3 _color = ambient + Lo;
     _color = _color / (_color + vec3(1.0)); // HDR tone mapping
     _color = pow(_color, vec3(1.0/2.2)); // gamma correction
-    return vec4(_color, 1.0);
+    return vec4(_color, alpha);
 }
