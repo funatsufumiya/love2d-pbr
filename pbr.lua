@@ -87,6 +87,19 @@ function pbr.new(fragPath, vertPath)
         self.shader:send("enableTransparency", 0)
     end)
 
+    -- directional light defaults (single directional light)
+    self._dirLightDir = {0, -1, 0}
+    self._dirLightColor = {1, 1, 1}
+    self._useDirectionalLight = false
+    -- ambient intensity default
+    self._ambientIntensity = 0.03
+    pcall(function()
+        self.shader:send("dirLightDir", self._dirLightDir)
+        self.shader:send("dirLightColor", self._dirLightColor)
+        self.shader:send("useDirectionalLight", 0)
+        self.shader:send("ambientIntensity", self._ambientIntensity)
+    end)
+
     function self:setTextures(textures)
         local function loadImage(v)
             return ensureTexture(v)
@@ -237,6 +250,37 @@ function pbr.new(fragPath, vertPath)
         self.shader:send("lightColors", colors)
     end
 
+    -- single directional light API
+    function self:setDirectionalLight(dir, color)
+        if type(dir) ~= "table" or type(color) ~= "table" then error("setDirectionalLight: expected tables for dir and color") end
+        self._dirLightDir = dir
+        self._dirLightColor = color
+        self._useDirectionalLight = true
+        pcall(function() self.shader:send("dirLightDir", self._dirLightDir) end)
+        pcall(function() self.shader:send("dirLightColor", self._dirLightColor) end)
+        pcall(function() self.shader:send("useDirectionalLight", 1) end)
+    end
+
+    function self:disableDirectionalLight()
+        self._useDirectionalLight = false
+        pcall(function() self.shader:send("useDirectionalLight", 0) end)
+    end
+
+    function self:getDirectionalLight()
+        return self._dirLightDir, self._dirLightColor, self._useDirectionalLight
+    end
+
+    -- ambient intensity API
+    function self:setAmbientIntensity(v)
+        if type(v) ~= "number" then error("setAmbientIntensity: expected number") end
+        self._ambientIntensity = v
+        pcall(function() self.shader:send("ambientIntensity", self._ambientIntensity) end)
+    end
+
+    function self:getAmbientIntensity()
+        return self._ambientIntensity
+    end
+
     function self:setCamera(camPos)
         self._camPos = camPos
     end
@@ -261,6 +305,12 @@ function pbr.new(fragPath, vertPath)
         if self._view then self.shader:send("viewMatrix", self._view) end
         if self.model then self.shader:send("modelMatrix", self.model) end
         if self.normal then self.shader:send("normalMatrix", self.normal) end
+        -- directional light uniforms
+        if self._dirLightDir then pcall(function() self.shader:send("dirLightDir", self._dirLightDir) end) end
+        if self._dirLightColor then pcall(function() self.shader:send("dirLightColor", self._dirLightColor) end) end
+        pcall(function() self.shader:send("useDirectionalLight", self._useDirectionalLight and 1 or 0) end)
+        -- ambient intensity
+        pcall(function() self.shader:send("ambientIntensity", self._ambientIntensity) end)
         -- ensure shader knows current alpha map / transparency state
         if self._alpha then pcall(function() self.shader:send("useAlphaMap", 1) end) else pcall(function() self.shader:send("useAlphaMap", 0) end) end
         if self._enableTransparency then pcall(function() self.shader:send("enableTransparency", 1) end) else pcall(function() self.shader:send("enableTransparency", 0) end) end

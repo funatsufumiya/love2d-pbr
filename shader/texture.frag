@@ -16,6 +16,12 @@ uniform vec3  lightPositions[4];
 uniform vec3 lightColors[4];
 
 uniform vec3 camPos;
+// directional (single) light
+uniform vec3 dirLightDir;
+uniform vec3 dirLightColor;
+uniform int useDirectionalLight;
+// ambient intensity multiplier
+uniform float ambientIntensity;
 
 const float PI = 3.14159265359;
 // ----------------------------------------------------------------------------
@@ -131,8 +137,24 @@ vec4 effect( vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords )
         // final composition
         Lo += (kD * albedo / PI + specular) * radiance * NdotL;
     }   
+    // directional light contribution (no attenuation, single global direction)
+    if (useDirectionalLight == 1) {
+        vec3 L = normalize(-dirLightDir);
+        vec3 H = normalize(V + L);
+        float D = DistributionGGX(N, H, roughness);
+        vec3  F = fresnelSchlick(clamp(dot(H, V), 0.0, 1.0), F0);
+        float G = GeometrySmith(N, V, L, roughness);
+        float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+        vec3 specular = D * G * F / denominator;
+        vec3 kS = F;
+        vec3 kD = vec3(1.0) - kS;
+        kD *= 1.0 - metallic;
+        vec3 radiance = dirLightColor;
+        float NdotL = max(dot(N, L), 0.0);
+        Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+    }
     
-    vec3 ambient = vec3(0.03) * albedo * ao; // ambient light
+    vec3 ambient = vec3(ambientIntensity) * albedo * ao; // ambient light
     vec3 _color = ambient + Lo;
     _color = _color / (_color + vec3(1.0)); // HDR tone mapping
     _color = pow(_color, vec3(1.0/2.2)); // gamma correction
