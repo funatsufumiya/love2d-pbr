@@ -10,7 +10,17 @@ end
 
 function pbr.new(fragPath, vertPath)
     local self = {}
-    self.shader = love.graphics.newShader(fragPath, vertPath)
+    -- allow omission of shader paths; use defaults if not provided
+    if fragPath and type(fragPath) == "userdata" then
+        -- caller provided a Shader object
+        self.shader = fragPath
+    else
+        local frag = fragPath or "shader/texture.frag"
+        local vert = vertPath or "shader/texture.vert"
+        local ok, sh = pcall(love.graphics.newShader, frag, vert)
+        if not ok then error(("pbr.new: failed to create shader: %s"):format(tostring(sh))) end
+        self.shader = sh
+    end
     self.model = identity4()
     self.normal = identity3()
 

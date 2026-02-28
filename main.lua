@@ -82,9 +82,11 @@ function love.load()
 
     mesh = love.graphics.newMesh(vertexFormat, obj.sphere, "triangles")
 
-    local shaderBaseFrag = "shader/texture.frag"
-    local shaderBaseVert = "shader/texture.vert"
-    pbrInstance = pbr.new(shaderBaseFrag, shaderBaseVert)
+    -- local shaderBaseFrag = "shader/texture.frag"
+    -- local shaderBaseVert = "shader/texture.vert"
+    -- pbrInstance = pbr.new(shaderBaseFrag, shaderBaseVert)
+
+    pbrInstance = pbr.new()
 
     local base = "assets/pbr/rusted_iron/"
     local texs = {
