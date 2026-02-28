@@ -48,6 +48,22 @@ function pbr.new(fragPath, vertPath)
         return nil
     end
 
+    -- normalize incoming texture-like values to an Image/Texture or nil
+    local function ensureTexture(v)
+        if not v then return nil end
+        local t = type(v)
+        if t == "string" then
+            return love.graphics.newImage(v)
+        end
+        if t == "number" or t == "table" then
+            return make1x1Image(v)
+        end
+        if t == "userdata" then
+            return v
+        end
+        error(("ensureTexture: unsupported texture type '%s'"):format(t))
+    end
+
     -- create sensible defaults so pbr.new() works with nil textures
     local default_albedo = make1x1Image({1,1,1})
     local default_metallic = make1x1Image(0)
@@ -73,16 +89,7 @@ function pbr.new(fragPath, vertPath)
 
     function self:setTextures(textures)
         local function loadImage(v)
-            if not v then return nil end
-            if type(v) == "string" then
-                return love.graphics.newImage(v)
-            end
-            -- if caller provided a numeric value or a color table, create a 1x1 image
-            if type(v) == "number" or type(v) == "table" then
-                local img = make1x1Image(v)
-                if img then return img end
-            end
-            return v
+            return ensureTexture(v)
         end
 
         local albedo = loadImage(textures.albedo)
@@ -92,7 +99,7 @@ function pbr.new(fragPath, vertPath)
         local alpha = loadImage(textures.alpha)
         local ao = loadImage(textures.ao)
 
-        if albedo then self.shader:send("albedoMap", albedo); self.albedo = albedo end
+        if albedo then self.shader:send("albedoMap", albedo) end
         if normal then self.shader:send("normalMap", normal) end
         if metallic then self.shader:send("metallicMap", metallic) end
         if roughness then self.shader:send("roughnessMap", roughness) end
@@ -176,6 +183,50 @@ function pbr.new(fragPath, vertPath)
     function self:setAlphaValue(v)
         local img = make1x1Image(v)
         if not img then error("setAlphaValue: expected number or color table") end
+        self._alpha = img
+        pcall(function() self.shader:send("alphaMap", img) end)
+        pcall(function() self.shader:send("useAlphaMap", self._alpha and 1 or 0) end)
+    end
+
+    -- Accept an existing Texture/Image userdata or create from string/number/table
+    function self:setAlbedoTexture(v)
+        local img = ensureTexture(v)
+        if not img then error("setAlbedoTexture: invalid texture") end
+        self._albedo = img
+        pcall(function() self.shader:send("albedoMap", img) end)
+    end
+
+    function self:setNormalTexture(v)
+        local img = ensureTexture(v)
+        if not img then error("setNormalTexture: invalid texture") end
+        self._normal = img
+        pcall(function() self.shader:send("normalMap", img) end)
+    end
+
+    function self:setMetallicTexture(v)
+        local img = ensureTexture(v)
+        if not img then error("setMetallicTexture: invalid texture") end
+        self._metallic = img
+        pcall(function() self.shader:send("metallicMap", img) end)
+    end
+
+    function self:setRoughnessTexture(v)
+        local img = ensureTexture(v)
+        if not img then error("setRoughnessTexture: invalid texture") end
+        self._roughness = img
+        pcall(function() self.shader:send("roughnessMap", img) end)
+    end
+
+    function self:setAOTexture(v)
+        local img = ensureTexture(v)
+        if not img then error("setAOTexture: invalid texture") end
+        self._ao = img
+        pcall(function() self.shader:send("aoMap", img) end)
+    end
+
+    function self:setAlphaTexture(v)
+        local img = ensureTexture(v)
+        if not img then error("setAlphaTexture: invalid texture") end
         self._alpha = img
         pcall(function() self.shader:send("alphaMap", img) end)
         pcall(function() self.shader:send("useAlphaMap", self._alpha and 1 or 0) end)
