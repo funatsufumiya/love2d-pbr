@@ -81,6 +81,7 @@ function love.load()
     end
 
     mesh = love.graphics.newMesh(vertexFormat, obj.sphere, "triangles")
+    currentMeshType = 'sphere'
 
     -- local shaderBaseFrag = "shader/texture.frag"
     -- local shaderBaseVert = "shader/texture.vert"
@@ -159,4 +160,23 @@ function love.update(dt)
 
     -- local roughness = 0.5 + 0.5 * math.cos(t * 0.5) -- adjust frequency as desired
     -- pbrInstance:setRoughnessValue(roughness)
+end
+
+function love.keypressed(key)
+    if key == '1' then
+        mesh = love.graphics.newMesh(vertexFormat, obj.sphere, "triangles")
+        mesh:setTexture(pbrInstance:getAlbedoTexture())
+        currentMeshType = 'sphere'
+        if love.graphics.setMeshCullMode then love.graphics.setMeshCullMode("back") end
+    elseif key == '2' then
+        mesh = love.graphics.newMesh(vertexFormat, obj.cube, "triangles")
+        mesh:setTexture(pbrInstance:getAlbedoTexture())
+        currentMeshType = 'cube'
+        if love.graphics.setMeshCullMode then love.graphics.setMeshCullMode("back") end
+    elseif key == '3' then
+        mesh = love.graphics.newMesh(vertexFormat, obj.quad, "triangles")
+        mesh:setTexture(pbrInstance:getAlbedoTexture())
+        currentMeshType = 'quad'
+        if love.graphics.setMeshCullMode then love.graphics.setMeshCullMode("none") end
+    end
 end

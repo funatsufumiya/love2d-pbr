@@ -46,9 +46,15 @@ local quad_raws = {{-1, 1, 0, 0, 1}, {-1, -1, 0, 0, 0}, {1, 1, 0, 1, 1}, {1, -1,
 -- 为了保持统一，添加了法线数据
 for i = 1, #quad_raws, 1 do
     local vert = quad_raws[i]
-    table.insert(vert, 4, 2)
-    table.insert(vert, 4, 2)
-    table.insert(vert, 4, 2)
+    -- quad_raws currently: {x, y, z, u, v}
+    -- convert to {x, y, z, nx, ny, nz, u, v} with flat normal (0,0,1)
+    local u = vert[4]
+    local v = vert[5]
+    vert[4] = 0
+    vert[5] = 0
+    vert[6] = 1
+    vert[7] = u
+    vert[8] = v
 end
 local quad_verts = {}
 table.insert(quad_verts, quad_raws[1])
