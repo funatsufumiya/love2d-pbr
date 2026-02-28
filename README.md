@@ -5,6 +5,8 @@
 ## Usage
 
 ```bash
+$ git submodule update --init --recursive # only first time
+
 $ love .
 ```
 
