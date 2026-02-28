@@ -14,21 +14,54 @@ function pbr.new(fragPath, vertPath)
     self.model = identity4()
     self.normal = identity3()
 
-    function self:setTextures(basePath)
-        local albedo = love.graphics.newImage(basePath .. "albedo.png")
-        local normal = love.graphics.newImage(basePath .. "normal.png")
-        local metallic = love.graphics.newImage(basePath .. "metallic.png")
-        local roughness = love.graphics.newImage(basePath .. "roughness.png")
-        local ao = love.graphics.newImage(basePath .. "ao.png")
+    function self:setTextures(textures)
+        local function loadImage(v)
+            if not v then return nil end
+            if type(v) == "string" then
+                return love.graphics.newImage(v)
+            end
+            return v
+        end
 
-        self.shader:send("albedoMap", albedo)
-        self.shader:send("normalMap", normal)
-        self.shader:send("metallicMap", metallic)
-        self.shader:send("roughnessMap", roughness)
-        self.shader:send("aoMap", ao)
+        local albedo = loadImage(textures.albedo)
+        local normal = loadImage(textures.normal)
+        local metallic = loadImage(textures.metallic)
+        local roughness = loadImage(textures.roughness)
+        local ao = loadImage(textures.ao)
 
-        self.albedo = albedo
-        return albedo
+        if albedo then self.shader:send("albedoMap", albedo); self.albedo = albedo end
+        if normal then self.shader:send("normalMap", normal) end
+        if metallic then self.shader:send("metallicMap", metallic) end
+        if roughness then self.shader:send("roughnessMap", roughness) end
+        if ao then self.shader:send("aoMap", ao) end
+
+        -- store references for accessors
+        self._albedo = albedo
+        self._normal = normal
+        self._metallic = metallic
+        self._roughness = roughness
+        self._ao = ao
+        -- do not require callers to use the return value; use getters instead
+    end
+
+    function self:getAlbedoTexture()
+        return self._albedo
+    end
+
+    function self:getNormalTexture()
+        return self._normal
+    end
+
+    function self:getMetallicTexture()
+        return self._metallic
+    end
+
+    function self:getRoughnessTexture()
+        return self._roughness
+    end
+
+    function self:getAOTexture()
+        return self._ao
     end
 
     function self:setLights(positions, colors)
@@ -37,18 +70,27 @@ function pbr.new(fragPath, vertPath)
     end
 
     function self:setCamera(camPos)
-        self.shader:send("camPos", camPos)
+        self._camPos = camPos
     end
 
-    function self:sendMatrices(proj, view, model, normal)
-        if proj then self.shader:send("projectionMatrix", proj) end
-        if view then self.shader:send("viewMatrix", view) end
-        if model then self.model = model; self.shader:send("modelMatrix", model) end
-        if normal then self.normal = normal; self.shader:send("normalMatrix", normal) end
+    function self:getCamera()
+        return self._camPos
+    end
+
+    function self:setMatrices(proj, view, model, normal)
+        -- store matrices but do not immediately send to shader
+        -- this preserves previous values when callers pass nil
+        if proj then self._projection = proj end
+        if view then self._view = view end
+        if model then self._model = model; self.model = model end
+        if normal then self._normal = normal; self.normal = normal end
     end
 
     function self:draw(mesh)
         love.graphics.setShader(self.shader)
+        if self._camPos then self.shader:send("camPos", self._camPos) end
+        if self._projection then self.shader:send("projectionMatrix", self._projection) end
+        if self._view then self.shader:send("viewMatrix", self._view) end
         if self.model then self.shader:send("modelMatrix", self.model) end
         if self.normal then self.shader:send("normalMatrix", self.normal) end
         love.graphics.draw(mesh)

@@ -87,8 +87,15 @@ function love.load()
     pbrInstance = pbr.new(shaderBaseFrag, shaderBaseVert)
 
     local base = "assets/pbr/rusted_iron/"
-    local albedo = pbrInstance:setTextures(base)
-    mesh:setTexture(albedo)
+    local texs = {
+        albedo = base .. "albedo.png",
+        normal = base .. "normal.png",
+        metallic = base .. "metallic.png",
+        roughness = base .. "roughness.png",
+        ao = base .. "ao.png",
+    }
+    pbrInstance:setTextures(texs)
+    mesh:setTexture(pbrInstance:getAlbedoTexture())
 
     pbrInstance:setLights({0, 0, 10,  5, 5, 10,  -5, 5, 10, 0, -5, 10}, {400,400,400, 250,250,250, 250,250,250, 200,200,200})
     pbrInstance:setCamera({0,0,3})
@@ -108,8 +115,6 @@ end
 
 function love.draw()
     love.graphics.clear(0.1, 0.1, 0.1)
-    pbrInstance:sendMatrices(projection, identity4(), model, normalMat)
-    pbrInstance:setCamera({0,0,3})
     pbrInstance:draw(mesh)
 end
 
@@ -119,4 +124,6 @@ function love.update(dt)
     local m4, n3 = rotationXYMatrix(rotX, rotY)
     model = m4
     normalMat = n3
+
+    pbrInstance:setMatrices(projection, identity4(), model, normalMat)
 end
