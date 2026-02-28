@@ -21,17 +21,66 @@ function pbr.new(fragPath, vertPath)
         if not ok then error(("pbr.new: failed to create shader: %s"):format(tostring(sh))) end
         self.shader = sh
     end
-    -- defaults for alpha/transparent handling
-    -- use integer flags to avoid GLSL/LÖVE boolean inconsistencies
-    pcall(function() self.shader:send("useAlphaMap", 0); self.shader:send("enableTransparency", 0) end)
+    -- (flags will be initialized after default textures are created)
     self.model = identity4()
     self.normal = identity3()
+
+    -- create a 1x1 Image from a numeric grayscale value or an RGB(A) table
+    local function make1x1Image(v)
+        local id = love.image.newImageData(1,1)
+        if type(v) == "number" then
+            local c = math.max(0, math.min(1, v))
+            id:setPixel(0,0, c, c, c, 1)
+            return love.graphics.newImage(id)
+        end
+        if type(v) == "table" then
+            local r = v[1] or 0
+            local g = v[2] or r
+            local b = v[3] or r
+            local a = v[4] or 1
+            r = math.max(0, math.min(1, r))
+            g = math.max(0, math.min(1, g))
+            b = math.max(0, math.min(1, b))
+            a = math.max(0, math.min(1, a))
+            id:setPixel(0,0, r, g, b, a)
+            return love.graphics.newImage(id)
+        end
+        return nil
+    end
+
+    -- create sensible defaults so pbr.new() works with nil textures
+    local default_albedo = make1x1Image({1,1,1})
+    local default_metallic = make1x1Image(0)
+    local default_roughness = make1x1Image(1)
+    local default_ao = make1x1Image(1)
+    local default_normal = make1x1Image({0.5, 0.5, 1.0}) -- flat normal in tangent space
+    -- store defaults and send to shader
+    self._albedo = default_albedo
+    self._metallic = default_metallic
+    self._roughness = default_roughness
+    self._ao = default_ao
+    self._normal = default_normal
+    self._alpha = nil
+    pcall(function()
+        if default_albedo then self.shader:send("albedoMap", default_albedo) end
+        if default_normal then self.shader:send("normalMap", default_normal) end
+        if default_metallic then self.shader:send("metallicMap", default_metallic) end
+        if default_roughness then self.shader:send("roughnessMap", default_roughness) end
+        if default_ao then self.shader:send("aoMap", default_ao) end
+        self.shader:send("useAlphaMap", 0)
+        self.shader:send("enableTransparency", 0)
+    end)
 
     function self:setTextures(textures)
         local function loadImage(v)
             if not v then return nil end
             if type(v) == "string" then
                 return love.graphics.newImage(v)
+            end
+            -- if caller provided a numeric value or a color table, create a 1x1 image
+            if type(v) == "number" or type(v) == "table" then
+                local img = make1x1Image(v)
+                if img then return img end
             end
             return v
         end
@@ -50,13 +99,13 @@ function pbr.new(fragPath, vertPath)
         if ao then self.shader:send("aoMap", ao) end
         if alpha then self.shader:send("alphaMap", alpha) end
 
-        -- store references for accessors
-        self._albedo = albedo
-        self._normal = normal
-        self._metallic = metallic
-        self._roughness = roughness
-        self._ao = ao
-        self._alpha = alpha
+        -- store references for accessors, but preserve existing values when callers pass nil
+        if albedo then self._albedo = albedo end
+        if normal then self._normal = normal end
+        if metallic then self._metallic = metallic end
+        if roughness then self._roughness = roughness end
+        if ao then self._ao = ao end
+        if alpha then self._alpha = alpha end
         -- update shader flag for whether an alpha map is present
         if self._alpha then
             pcall(function() self.shader:send("useAlphaMap", 1) end)
@@ -93,6 +142,43 @@ function pbr.new(fragPath, vertPath)
 
     function self:getAOTexture()
         return self._ao
+    end
+
+    -- Explicit setter aliases that create 1x1 images from numbers or color tables
+    function self:setBaseColor(color)
+        local img = make1x1Image(color)
+        if not img then error("setBaseColor: expected number or color table") end
+        self._albedo = img
+        pcall(function() self.shader:send("albedoMap", img) end)
+    end
+
+    function self:setMetallicValue(v)
+        local img = make1x1Image(v)
+        if not img then error("setMetallicValue: expected number or color table") end
+        self._metallic = img
+        pcall(function() self.shader:send("metallicMap", img) end)
+    end
+
+    function self:setRoughnessValue(v)
+        local img = make1x1Image(v)
+        if not img then error("setRoughnessValue: expected number or color table") end
+        self._roughness = img
+        pcall(function() self.shader:send("roughnessMap", img) end)
+    end
+
+    function self:setAOValue(v)
+        local img = make1x1Image(v)
+        if not img then error("setAOValue: expected number or color table") end
+        self._ao = img
+        pcall(function() self.shader:send("aoMap", img) end)
+    end
+
+    function self:setAlphaValue(v)
+        local img = make1x1Image(v)
+        if not img then error("setAlphaValue: expected number or color table") end
+        self._alpha = img
+        pcall(function() self.shader:send("alphaMap", img) end)
+        pcall(function() self.shader:send("useAlphaMap", self._alpha and 1 or 0) end)
     end
 
     function self:setLights(positions, colors)
