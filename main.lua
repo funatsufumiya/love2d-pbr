@@ -151,4 +151,12 @@ function love.update(dt)
     normalMat = n3
 
     pbrInstance:setMatrices(projection, identity4(), model, normalMat)
+    -- animate metallic value over time (0..1)
+    local t = love.timer.getTime()
+
+    -- local metal = 0.5 + 0.5 * math.sin(t * 0.5) -- adjust frequency as desired
+    -- pbrInstance:setMetallicValue(metal)
+
+    -- local roughness = 0.5 + 0.5 * math.cos(t * 0.5) -- adjust frequency as desired
+    -- pbrInstance:setRoughnessValue(roughness)
 end
