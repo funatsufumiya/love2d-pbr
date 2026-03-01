@@ -36,6 +36,7 @@ uniform float ambientIntensity;
 // appropriate derivatives when it's set. This is a pragmatic workaround
 // to match Canvas and direct-screen rendering behavior.
 uniform int isCanvasEnabled;
+uniform int invertNormal;
 uniform float pbrGamma;
 
 const float PI = 3.14159265359;
@@ -43,6 +44,9 @@ const float PI = 3.14159265359;
 vec3 getNormalFromMap(sampler2D normalMap, vec2 TexCoords)
 {
     vec3 tangentNormal = Texel(normalMap, TexCoords).xyz * 2.0 - 1.0;
+    if (invertNormal == 1) {
+        tangentNormal.y = -tangentNormal.y;
+    }
 
     vec3 Q1  = dFdx(WorldPos);
     vec3 Q2  = dFdy(WorldPos);

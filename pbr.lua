@@ -105,11 +105,14 @@ function pbr.new(fragPath, vertPath)
     self._useDirectionalLight = false
     -- ambient intensity default
     self._ambientIntensity = 0.03
+    -- normal inversion (for normal map Y-up vs Y-down conventions)
+    self._invertNormal = false
     pcall(function()
         self.shader:send("dirLightDir", self._dirLightDir)
         self.shader:send("dirLightColor", self._dirLightColor)
         self.shader:send("useDirectionalLight", 0)
         self.shader:send("ambientIntensity", self._ambientIntensity)
+        pcall(function() self.shader:send("invertNormal", 0) end)
     end)
 
     function self:setTextures(textures)
@@ -415,6 +418,11 @@ function pbr.new(fragPath, vertPath)
         pcall(function() self.shader:send("useAlphaMap", self._alpha and 1 or 0) end)
     end
 
+    function self:setInvertNormal(enabled)
+        self._invertNormal = enabled and true or false
+        pcall(function() self.shader:send("invertNormal", self._invertNormal and 1 or 0) end)
+    end
+
     function self:setLights(positions, colors)
         pcall(function() self.shader:send("lightPositions", positions) end)
         pcall(function() self.shader:send("lightColors", colors) end)
@@ -479,6 +487,7 @@ function pbr.new(fragPath, vertPath)
         -- directional light uniforms
         if self._dirLightDir then pcall(function() self.shader:send("dirLightDir", self._dirLightDir) end) end
         if self._dirLightColor then pcall(function() self.shader:send("dirLightColor", self._dirLightColor) end) end
+        pcall(function() self.shader:send("invertNormal", self._invertNormal and 1 or 0) end)
         pcall(function() self.shader:send("useDirectionalLight", self._useDirectionalLight and 1 or 0) end)
         -- ambient intensity
         pcall(function() self.shader:send("ambientIntensity", self._ambientIntensity) end)
