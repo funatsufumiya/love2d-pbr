@@ -96,6 +96,8 @@ function love.load()
         metallic = base .. "metallic.png",
         roughness = base .. "roughness.png",
         ao = base .. "ao.png",
+        -- emissive = base .. "albedo.png",
+        -- emissiveIntensity = 100.0,
         -- alpha = base .. "alpha.png",
     }
     pbrInstance:setTextures(texs)

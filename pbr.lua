@@ -70,12 +70,15 @@ function pbr.new(fragPath, vertPath)
     local default_roughness = make1x1Image(1)
     local default_ao = make1x1Image(1)
     local default_normal = make1x1Image({0.5, 0.5, 1.0}) -- flat normal in tangent space
+    local default_emissive = make1x1Image(0)
     -- store defaults and send to shader
     self._albedo = default_albedo
     self._metallic = default_metallic
     self._roughness = default_roughness
     self._ao = default_ao
     self._normal = default_normal
+    self._emissive = default_emissive
+    self._emissiveIntensity = 0
     self._alpha = nil
     pcall(function()
         if default_albedo then self.shader:send("albedoMap", default_albedo) end
@@ -83,6 +86,9 @@ function pbr.new(fragPath, vertPath)
         if default_metallic then self.shader:send("metallicMap", default_metallic) end
         if default_roughness then self.shader:send("roughnessMap", default_roughness) end
         if default_ao then self.shader:send("aoMap", default_ao) end
+        if default_emissive then self.shader:send("emissiveMap", default_emissive) end
+        self.shader:send("emissiveIntensity", 0)
+        self.shader:send("useEmissiveMap", 0)
         self.shader:send("useAlphaMap", 0)
         self.shader:send("enableTransparency", 0)
     end)
@@ -111,12 +117,16 @@ function pbr.new(fragPath, vertPath)
         local roughness = loadImage(textures.roughness)
         local alpha = loadImage(textures.alpha)
         local ao = loadImage(textures.ao)
+        local emissive = loadImage(textures.emissive)
+        local emissiveIntensity = textures.emissiveIntensity
 
         if albedo then self.shader:send("albedoMap", albedo) end
         if normal then self.shader:send("normalMap", normal) end
         if metallic then self.shader:send("metallicMap", metallic) end
         if roughness then self.shader:send("roughnessMap", roughness) end
         if ao then self.shader:send("aoMap", ao) end
+        if emissive then self.shader:send("emissiveMap", emissive) end
+        if type(emissiveIntensity) == "number" then self.shader:send("emissiveIntensity", emissiveIntensity) end
         if alpha then self.shader:send("alphaMap", alpha) end
 
         -- store references for accessors, but preserve existing values when callers pass nil
@@ -125,12 +135,20 @@ function pbr.new(fragPath, vertPath)
         if metallic then self._metallic = metallic end
         if roughness then self._roughness = roughness end
         if ao then self._ao = ao end
+        if emissive then self._emissive = emissive end
+        if type(emissiveIntensity) == "number" then self._emissiveIntensity = emissiveIntensity end
         if alpha then self._alpha = alpha end
         -- update shader flag for whether an alpha map is present
         if self._alpha then
             pcall(function() self.shader:send("useAlphaMap", 1) end)
         else
             pcall(function() self.shader:send("useAlphaMap", 0) end)
+        end
+        -- update emissive flag
+        if self._emissive then
+            pcall(function() self.shader:send("useEmissiveMap", 1) end)
+        else
+            pcall(function() self.shader:send("useEmissiveMap", 0) end)
         end
         -- do not require callers to use the return value; use getters instead
     end
@@ -162,6 +180,34 @@ function pbr.new(fragPath, vertPath)
 
     function self:getAOTexture()
         return self._ao
+    end
+
+    function self:getEmissiveTexture()
+        return self._emissive
+    end
+
+    function self:setEmissiveValue(v)
+        local img = make1x1Image(v)
+        if not img then error("setEmissiveValue: expected number or color table") end
+        self._emissive = img
+        pcall(function() self.shader:send("emissiveMap", img) end)
+    end
+
+    function self:setEmissiveTexture(v)
+        local img = ensureTexture(v)
+        if not img then error("setEmissiveTexture: invalid texture") end
+        self._emissive = img
+        pcall(function() self.shader:send("emissiveMap", img) end)
+    end
+
+    function self:setEmissiveIntensity(v)
+        if type(v) ~= "number" then error("setEmissiveIntensity: expected number") end
+        self._emissiveIntensity = v
+        pcall(function() self.shader:send("emissiveIntensity", self._emissiveIntensity) end)
+    end
+
+    function self:getEmissiveIntensity()
+        return self._emissiveIntensity
     end
 
     -- Explicit setter aliases that create 1x1 images from numbers or color tables
@@ -314,6 +360,9 @@ function pbr.new(fragPath, vertPath)
         -- ensure shader knows current alpha map / transparency state
         if self._alpha then pcall(function() self.shader:send("useAlphaMap", 1) end) else pcall(function() self.shader:send("useAlphaMap", 0) end) end
         if self._enableTransparency then pcall(function() self.shader:send("enableTransparency", 1) end) else pcall(function() self.shader:send("enableTransparency", 0) end) end
+        -- emissive map and intensity
+        if self._emissive then pcall(function() self.shader:send("useEmissiveMap", 1) end) else pcall(function() self.shader:send("useEmissiveMap", 0) end) end
+        pcall(function() self.shader:send("emissiveIntensity", self._emissiveIntensity or 0) end)
         love.graphics.draw(mesh)
         love.graphics.setShader()
     end

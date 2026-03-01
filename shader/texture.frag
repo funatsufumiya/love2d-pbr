@@ -10,6 +10,9 @@ uniform sampler2D aoMap;
 uniform sampler2D alphaMap;
 uniform int useAlphaMap;
 uniform int enableTransparency;
+uniform sampler2D emissiveMap;
+uniform float emissiveIntensity;
+uniform int useEmissiveMap;
 
 // lights
 uniform vec3  lightPositions[4];
@@ -156,6 +159,13 @@ vec4 effect( vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords )
     
     vec3 ambient = vec3(ambientIntensity) * albedo * ao; // ambient light
     vec3 _color = ambient + Lo;
+    // emissive contribution (in sRGB -> linear conversion consistent with albedo)
+    vec3 emissive = vec3(0.0);
+    if (useEmissiveMap == 1) {
+        emissive = pow(Texel(emissiveMap, texture_coords).rgb, vec3(2.2));
+    }
+    emissive *= emissiveIntensity;
+    _color += emissive;
     _color = _color / (_color + vec3(1.0)); // HDR tone mapping
     _color = pow(_color, vec3(1.0/2.2)); // gamma correction
     return vec4(_color, alpha);
