@@ -80,6 +80,8 @@ function pbr.new(fragPath, vertPath)
     self._emissive = default_emissive
     self._emissiveIntensity = 0
     self._alpha = nil
+    -- gamma: nil = not explicitly set; shader fallback preserves prior behavior
+    self._gamma = nil
     pcall(function()
         if default_albedo then self.shader:send("albedoMap", default_albedo) end
         if default_normal then self.shader:send("normalMap", default_normal) end
@@ -91,6 +93,8 @@ function pbr.new(fragPath, vertPath)
         self.shader:send("useEmissiveMap", 0)
         self.shader:send("useAlphaMap", 0)
         self.shader:send("enableTransparency", 0)
+        -- default to 0.0 so shader can choose fallback gamma when >0 is required
+        pcall(function() self.shader:send("pbrGamma", 0.0) end)
         pcall(function() self.shader:send("debugShowFaces", 0) end)
         pcall(function() self.shader:send("debugShowNormals", 0) end)
     end)
@@ -206,6 +210,21 @@ function pbr.new(fragPath, vertPath)
         if type(v) ~= "number" then error("setEmissiveIntensity: expected number") end
         self._emissiveIntensity = v
         pcall(function() self.shader:send("emissiveIntensity", self._emissiveIntensity) end)
+    end
+
+    function self:setGamma(v)
+        if v == nil then
+            self._gamma = nil
+            pcall(function() self.shader:send("pbrGamma", 0.0) end)
+            return
+        end
+        if type(v) ~= "number" or v <= 0 then error("setGamma: expected positive number or nil") end
+        self._gamma = v
+        pcall(function() self.shader:send("pbrGamma", self._gamma) end)
+    end
+
+    function self:getGamma()
+        return self._gamma
     end
 
     function self:getEmissiveIntensity()
@@ -388,6 +407,8 @@ function pbr.new(fragPath, vertPath)
         pcall(function() self.shader:send("emissiveIntensity", self._emissiveIntensity or 0) end)
         pcall(function() self.shader:send("useBloom", self._useBloom and 1 or 0) end)
         pcall(function() self.shader:send("bloomIntensity", self._bloomIntensity or 1.0) end)
+        -- send current gamma (0.0 => shader fallback to legacy 2.2 behavior)
+        pcall(function() self.shader:send("pbrGamma", self._gamma or 0.0) end)
         love.graphics.draw(mesh)
         love.graphics.setShader()
     end

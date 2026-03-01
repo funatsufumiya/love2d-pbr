@@ -36,6 +36,7 @@ uniform float ambientIntensity;
 // appropriate derivatives when it's set. This is a pragmatic workaround
 // to match Canvas and direct-screen rendering behavior.
 uniform int isCanvasEnabled;
+uniform float pbrGamma;
 
 const float PI = 3.14159265359;
 // ----------------------------------------------------------------------------
@@ -109,7 +110,8 @@ vec4 effect( vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords )
 {
     // // Force discard of back-facing fragments to avoid rendering reversed-triangle artifacts
     // if (!gl_FrontFacing) discard;
-    vec3 albedo     = pow(Texel(albedoMap, texture_coords).rgb, vec3(2.2));
+    float gamma = (pbrGamma > 0.0) ? pbrGamma : 2.2;
+    vec3 albedo     = pow(Texel(albedoMap, texture_coords).rgb, vec3(gamma));
     float metallic  = Texel(metallicMap, texture_coords).r;
     float roughness = Texel(roughnessMap, texture_coords).r;
     float ao        = Texel(aoMap, texture_coords).r;
@@ -194,7 +196,7 @@ vec4 effect( vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords )
     // emissive contribution (in sRGB -> linear conversion consistent with albedo)
     vec3 emissive = vec3(0.0);
     if (useEmissiveMap == 1) {
-        emissive = pow(Texel(emissiveMap, texture_coords).rgb, vec3(2.2));
+        emissive = pow(Texel(emissiveMap, texture_coords).rgb, vec3(gamma));
     }
     emissive *= emissiveIntensity;
     if (renderEmissiveOnly == 1) {
@@ -208,6 +210,6 @@ vec4 effect( vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords )
     // Add emissive to final color and always tonemap+gamma (no toggle)
     _color += emissive;
     vec3 mapped = _color / (_color + vec3(1.0)); // HDR tone mapping
-    mapped = pow(mapped, vec3(1.0/2.2)); // gamma correction
+    mapped = pow(mapped, vec3(1.0/gamma)); // gamma correction
     return vec4(mapped, alpha);
 }
