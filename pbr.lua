@@ -193,17 +193,31 @@ function pbr.new(fragPath, vertPath)
     end
 
     function self:setEmissiveValue(v)
+        if v == nil then
+            self._emissive = default_emissive
+            pcall(function() self.shader:send("emissiveMap", self._emissive) end)
+            pcall(function() self.shader:send("useEmissiveMap", 0) end)
+            return
+        end
         local img = make1x1Image(v)
         if not img then error("setEmissiveValue: expected number or color table") end
         self._emissive = img
         pcall(function() self.shader:send("emissiveMap", img) end)
+        pcall(function() self.shader:send("useEmissiveMap", 1) end)
     end
 
     function self:setEmissiveTexture(v)
+        if v == nil then
+            self._emissive = default_emissive
+            pcall(function() self.shader:send("emissiveMap", self._emissive) end)
+            pcall(function() self.shader:send("useEmissiveMap", 0) end)
+            return
+        end
         local img = ensureTexture(v)
         if not img then error("setEmissiveTexture: invalid texture") end
         self._emissive = img
         pcall(function() self.shader:send("emissiveMap", img) end)
+        pcall(function() self.shader:send("useEmissiveMap", 1) end)
     end
 
     function self:setEmissiveIntensity(v)
@@ -253,6 +267,11 @@ function pbr.new(fragPath, vertPath)
 
     -- Explicit setter aliases that create 1x1 images from numbers or color tables
     function self:setBaseColor(color)
+        if color == nil then
+            self._albedo = default_albedo
+            pcall(function() self.shader:send("albedoMap", self._albedo) end)
+            return
+        end
         local img = make1x1Image(color)
         if not img then error("setBaseColor: expected number or color table") end
         self._albedo = img
@@ -260,6 +279,11 @@ function pbr.new(fragPath, vertPath)
     end
 
     function self:setMetallicValue(v)
+        if v == nil then
+            self._metallic = default_metallic
+            pcall(function() self.shader:send("metallicMap", self._metallic) end)
+            return
+        end
         local img = make1x1Image(v)
         if not img then error("setMetallicValue: expected number or color table") end
         self._metallic = img
@@ -267,6 +291,11 @@ function pbr.new(fragPath, vertPath)
     end
 
     function self:setRoughnessValue(v)
+        if v == nil then
+            self._roughness = default_roughness
+            pcall(function() self.shader:send("roughnessMap", self._roughness) end)
+            return
+        end
         local img = make1x1Image(v)
         if not img then error("setRoughnessValue: expected number or color table") end
         self._roughness = img
@@ -274,6 +303,11 @@ function pbr.new(fragPath, vertPath)
     end
 
     function self:setAOValue(v)
+        if v == nil then
+            self._ao = default_ao
+            pcall(function() self.shader:send("aoMap", self._ao) end)
+            return
+        end
         local img = make1x1Image(v)
         if not img then error("setAOValue: expected number or color table") end
         self._ao = img
@@ -281,6 +315,11 @@ function pbr.new(fragPath, vertPath)
     end
 
     function self:setAlphaValue(v)
+        if v == nil then
+            self._alpha = nil
+            pcall(function() self.shader:send("useAlphaMap", 0) end)
+            return
+        end
         local img = make1x1Image(v)
         if not img then error("setAlphaValue: expected number or color table") end
         self._alpha = img
@@ -290,6 +329,11 @@ function pbr.new(fragPath, vertPath)
 
     -- Accept an existing Texture/Image userdata or create from string/number/table
     function self:setAlbedoTexture(v)
+        if v == nil then
+            self._albedo = default_albedo
+            pcall(function() self.shader:send("albedoMap", self._albedo) end)
+            return
+        end
         local img = ensureTexture(v)
         if not img then error("setAlbedoTexture: invalid texture") end
         self._albedo = img
@@ -297,13 +341,37 @@ function pbr.new(fragPath, vertPath)
     end
 
     function self:setNormalTexture(v)
+        if v == nil then
+            self._normal = default_normal
+            pcall(function() self.shader:send("normalMap", self._normal) end)
+            return
+        end
         local img = ensureTexture(v)
         if not img then error("setNormalTexture: invalid texture") end
         self._normal = img
         pcall(function() self.shader:send("normalMap", img) end)
     end
 
+    -- Set normal map or reset to default when `nil` is passed.
+    -- Accepts the same texture-like values as other setters (string/number/table/userdata).
+    function self:setNormal(v)
+        if v == nil then
+            self._normal = default_normal
+            pcall(function() self.shader:send("normalMap", self._normal) end)
+            return
+        end
+        local img = ensureTexture(v)
+        if not img then error("setNormal: invalid texture") end
+        self._normal = img
+        pcall(function() self.shader:send("normalMap", img) end)
+    end
+
     function self:setMetallicTexture(v)
+        if v == nil then
+            self._metallic = default_metallic
+            pcall(function() self.shader:send("metallicMap", self._metallic) end)
+            return
+        end
         local img = ensureTexture(v)
         if not img then error("setMetallicTexture: invalid texture") end
         self._metallic = img
@@ -311,6 +379,11 @@ function pbr.new(fragPath, vertPath)
     end
 
     function self:setRoughnessTexture(v)
+        if v == nil then
+            self._roughness = default_roughness
+            pcall(function() self.shader:send("roughnessMap", self._roughness) end)
+            return
+        end
         local img = ensureTexture(v)
         if not img then error("setRoughnessTexture: invalid texture") end
         self._roughness = img
@@ -318,6 +391,11 @@ function pbr.new(fragPath, vertPath)
     end
 
     function self:setAOTexture(v)
+        if v == nil then
+            self._ao = default_ao
+            pcall(function() self.shader:send("aoMap", self._ao) end)
+            return
+        end
         local img = ensureTexture(v)
         if not img then error("setAOTexture: invalid texture") end
         self._ao = img
@@ -325,6 +403,11 @@ function pbr.new(fragPath, vertPath)
     end
 
     function self:setAlphaTexture(v)
+        if v == nil then
+            self._alpha = nil
+            pcall(function() self.shader:send("useAlphaMap", 0) end)
+            return
+        end
         local img = ensureTexture(v)
         if not img then error("setAlphaTexture: invalid texture") end
         self._alpha = img
