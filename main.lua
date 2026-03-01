@@ -4,6 +4,7 @@ local vertexFormat = {{"VertexPosition", "float", 3}, {"VertexNormal", "float", 
 
 local pbr = require "pbr"
 local obj = require "obj"
+local Bloom = require "bloom"
 
 local function flatten4(m)
     local out = {}
@@ -38,6 +39,9 @@ local rotY = 0
 local rotX = 0
 local rotSpeedY = 0.6 -- radians/sec
 local rotSpeedX = 0.3
+-- debug flag: show bright/emissive capture instead of additive composite
+-- bloom display mode: 0 = normal, 1 = emissive-only debug, 2 = additive bloom
+local bloomMode = 0
 
 local function rotationXYMatrix(rx, ry)
     local cx = math.cos(rx)
@@ -97,7 +101,7 @@ function love.load()
         roughness = base .. "roughness.png",
         ao = base .. "ao.png",
         -- emissive = base .. "albedo.png",
-        -- emissiveIntensity = 100.0,
+        -- emissiveIntensity = 1,
         -- alpha = base .. "alpha.png",
     }
     pbrInstance:setTextures(texs)
@@ -115,6 +119,7 @@ function love.load()
     view = identity4()
     model = identity4()
     normalMat = identity3()
+    -- bloomer = Bloom.new({ enabled = true, blurRadius = 1.5, threshold = 0.8 })
 end
 
 local function drawCheckerboard(w, h, tile)
@@ -137,13 +142,33 @@ end
 function love.resize(w, h)
     local aspect = w / h
     projection = ortho(-2 * aspect, 2 * aspect, -2, 2, -10, 10)
+    if bloomer then bloomer:resize(w,h) end
 end
 
 function love.draw()
     love.graphics.clear(0.1, 0.1, 0.1)
     local w, h = love.graphics.getWidth(), love.graphics.getHeight()
-    -- drawCheckerboard(w, h, 48) -- larger tiles to make alpha easier to see
-    pbrInstance:draw(mesh)
+
+    -- Use the bloom module to process the render; it will draw the scene and
+    -- composite bloom. Examples below show how to pass options or debug the
+    -- emissive-only source. Uncomment the debug block to inspect the emissive
+    -- canvas directly.
+
+    if bloomer and bloomer:isEnabled() then
+        if bloomMode == 0 then
+            -- normal render
+            pbrInstance:draw(mesh)
+        elseif bloomMode == 1 then
+            -- emissive-only debug (don't draw normal scene)
+            bloomer:debugShowBright(pbrInstance, function() pbrInstance:draw(mesh) end)
+        elseif bloomMode == 2 then
+            -- normal scene, then additive emissive/bloom overlay
+            pbrInstance:draw(mesh)
+            bloomer:renderEmissiveOverScene(pbrInstance, function() pbrInstance:draw(mesh) end)
+        end
+    else
+        pbrInstance:draw(mesh)
+    end
 end
 
 function love.update(dt)
@@ -165,6 +190,28 @@ function love.update(dt)
 end
 
 function love.keypressed(key)
+    if key == 'b' then
+        bloomMode = (bloomMode + 1) % 3
+        local names = {"normal", "emissive-only", "additive-bloom"}
+        print('bloomMode =', bloomMode, names[bloomMode+1])
+        return
+    end
+    if key == 'n' then
+        if pbrInstance and pbrInstance.getDebugShowNormals then
+            local cur = pbrInstance:getDebugShowNormals() or false
+            pbrInstance:setDebugShowNormals(not cur)
+            print('debugShowNormals =', not cur)
+        end
+        return
+    end
+    if key == 'm' then
+        if pbrInstance and pbrInstance.getDebugShowFaces then
+            local cur = pbrInstance:getDebugShowFaces() or false
+            pbrInstance:setDebugShowFaces(not cur)
+            print('debugShowFaces =', not cur)
+        end
+        return
+    end
     if key == '1' then
         mesh = love.graphics.newMesh(vertexFormat, obj.sphere, "triangles")
         mesh:setTexture(pbrInstance:getAlbedoTexture())

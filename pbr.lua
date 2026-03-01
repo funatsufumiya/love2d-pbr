@@ -91,6 +91,8 @@ function pbr.new(fragPath, vertPath)
         self.shader:send("useEmissiveMap", 0)
         self.shader:send("useAlphaMap", 0)
         self.shader:send("enableTransparency", 0)
+        pcall(function() self.shader:send("debugShowFaces", 0) end)
+        pcall(function() self.shader:send("debugShowNormals", 0) end)
     end)
 
     -- directional light defaults (single directional light)
@@ -210,6 +212,26 @@ function pbr.new(fragPath, vertPath)
         return self._emissiveIntensity
     end
 
+    -- Debug: show front/back faces in shader when enabled
+    function self:setDebugShowFaces(enabled)
+        self._debugShowFaces = enabled and true or false
+        pcall(function() self.shader:send("debugShowFaces", self._debugShowFaces and 1 or 0) end)
+    end
+
+    function self:getDebugShowFaces()
+        return self._debugShowFaces
+    end
+
+        -- Debug: visualize normals in shader when enabled
+        function self:setDebugShowNormals(enabled)
+            self._debugShowNormals = enabled and true or false
+            pcall(function() self.shader:send("debugShowNormals", self._debugShowNormals and 1 or 0) end)
+        end
+
+        function self:getDebugShowNormals()
+            return self._debugShowNormals
+        end
+
     -- Explicit setter aliases that create 1x1 images from numbers or color tables
     function self:setBaseColor(color)
         local img = make1x1Image(color)
@@ -292,8 +314,8 @@ function pbr.new(fragPath, vertPath)
     end
 
     function self:setLights(positions, colors)
-        self.shader:send("lightPositions", positions)
-        self.shader:send("lightColors", colors)
+        pcall(function() self.shader:send("lightPositions", positions) end)
+        pcall(function() self.shader:send("lightColors", colors) end)
     end
 
     -- single directional light API
@@ -346,6 +368,7 @@ function pbr.new(fragPath, vertPath)
 
     function self:draw(mesh)
         love.graphics.setShader(self.shader)
+        -- (texture samplers are sent when set via setters; no per-frame resend)
         if self._camPos then self.shader:send("camPos", self._camPos) end
         if self._projection then self.shader:send("projectionMatrix", self._projection) end
         if self._view then self.shader:send("viewMatrix", self._view) end
@@ -363,6 +386,8 @@ function pbr.new(fragPath, vertPath)
         -- emissive map and intensity
         if self._emissive then pcall(function() self.shader:send("useEmissiveMap", 1) end) else pcall(function() self.shader:send("useEmissiveMap", 0) end) end
         pcall(function() self.shader:send("emissiveIntensity", self._emissiveIntensity or 0) end)
+        pcall(function() self.shader:send("useBloom", self._useBloom and 1 or 0) end)
+        pcall(function() self.shader:send("bloomIntensity", self._bloomIntensity or 1.0) end)
         love.graphics.draw(mesh)
         love.graphics.setShader()
     end

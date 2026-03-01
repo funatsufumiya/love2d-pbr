@@ -13,6 +13,9 @@ uniform int enableTransparency;
 uniform sampler2D emissiveMap;
 uniform float emissiveIntensity;
 uniform int useEmissiveMap;
+uniform int renderEmissiveOnly;
+uniform int debugShowFaces;
+uniform int debugShowNormals;
 
 // lights
 uniform vec3  lightPositions[4];
@@ -25,6 +28,14 @@ uniform vec3 dirLightColor;
 uniform int useDirectionalLight;
 // ambient intensity multiplier
 uniform float ambientIntensity;
+// NOTE (WORKAROUND): When rendering into a Canvas, LÖVE flips the Y
+// coordinate. That flip changes the sign of dFdy/dFdx derivatives used
+// to compute tangent/bitangent (T/B) from screen-space derivatives, which
+// can invert the computed normal from normal maps. To compensate we expose
+// `isCanvasEnabled` (set by the Canvas-rendering path) and invert the
+// appropriate derivatives when it's set. This is a pragmatic workaround
+// to match Canvas and direct-screen rendering behavior.
+uniform int isCanvasEnabled;
 
 const float PI = 3.14159265359;
 // ----------------------------------------------------------------------------
@@ -36,6 +47,14 @@ vec3 getNormalFromMap(sampler2D normalMap, vec2 TexCoords)
     vec3 Q2  = dFdy(WorldPos);
     vec2 st1 = dFdx(TexCoords);
     vec2 st2 = dFdy(TexCoords);
+
+    // If rendering to a Canvas, LÖVE flips the Y coordinate in the
+    // vertex stage; this reverses the sign of dFdy. Compensate here so
+    // the TBN handedness remains consistent with direct-screen rendering.
+    if (isCanvasEnabled == 1) {
+        Q2 = -Q2;
+        st2 = -st2;
+    }
 
     vec3 N   = normalize(Normal);
     vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
@@ -111,6 +130,19 @@ vec4 effect( vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords )
     vec3 N = getNormalFromMap(normalMap,texture_coords);
     vec3 V = normalize(camPos - WorldPos);
 
+    // Debug: if requested, visualize front/back faces or normals for any render mode
+    if (debugShowFaces == 1) {
+        if (gl_FrontFacing) {
+            return vec4(1.0, 0.0, 0.0, 1.0);
+        } else {
+            return vec4(0.0, 0.0, 1.0, 1.0);
+        }
+    }
+    if (debugShowNormals == 1) {
+        vec3 nvis = normalize(N) * 0.5 + 0.5;
+        return vec4(nvis, 1.0);
+    }
+
     // Material base reflectance
     vec3 F0 = vec3(0.04); 
     F0 = mix(F0, albedo, metallic);
@@ -165,8 +197,17 @@ vec4 effect( vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords )
         emissive = pow(Texel(emissiveMap, texture_coords).rgb, vec3(2.2));
     }
     emissive *= emissiveIntensity;
+    if (renderEmissiveOnly == 1) {
+        // Emissive-only: tonemap + gamma so capture matches final appearance
+        vec3 em = emissive;
+        vec3 em_mapped = em / (em + vec3(1.0));
+        em_mapped = pow(em_mapped, vec3(1.0/2.2));
+        float a = (length(emissive) > 0.0) ? 1.0 : 0.0;
+        return vec4(em_mapped, a);
+    }
+    // Add emissive to final color and always tonemap+gamma (no toggle)
     _color += emissive;
-    _color = _color / (_color + vec3(1.0)); // HDR tone mapping
-    _color = pow(_color, vec3(1.0/2.2)); // gamma correction
-    return vec4(_color, alpha);
+    vec3 mapped = _color / (_color + vec3(1.0)); // HDR tone mapping
+    mapped = pow(mapped, vec3(1.0/2.2)); // gamma correction
+    return vec4(mapped, alpha);
 }
